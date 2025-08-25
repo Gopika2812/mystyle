@@ -1,75 +1,166 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { Picker } from "@react-native-picker/picker";
+import React, { useEffect, useState } from "react";
+import {
+  FlatList,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+} from "react-native";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+type Cloth = {
+  _id: string;
+  name: string;
+  price: number;
+  size: string;
+  description: string;
+  image: string;
+};
 
-export default function HomeScreen() {
+export default function HomePage() {
+  const { width } = useWindowDimensions();
+  const numColumns = width > 1024 ? 4 : width > 768 ? 3 : 2;
+  const imageHeight = width > 768 ? 550 : 350;
+
+  const [cloths, setCloths] = useState<Cloth[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<{ [key: string]: string }>(
+    {}
+  );
+
+  useEffect(() => {
+    fetch("http://172.20.25.20:5000/cloth")
+      .then((res) => res.json())
+      .then((data) => setCloths(data))
+      .catch((err) => console.error(err));
+  }, []);
+
+  const handleAddToCart = (item: Cloth) => {
+    const size = selectedSizes[item._id] || "M";
+    console.log("Added to cart:", { ...item, size });
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <ThemedView style={styles.container}>
+      {/* Page Heading */}
+      <ThemedText type="title" style={styles.heading}>
+        Today&apos;s Trends..
+      </ThemedText>
+
+      <FlatList
+        data={cloths}
+        key={numColumns}
+        keyExtractor={(item) => item._id}
+        numColumns={numColumns}
+        columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Image
+              source={{ uri: item.image }}
+              style={[styles.image, { height: imageHeight }]}
+              resizeMode="cover"
+            />
+
+            {/* Centered content */}
+            <View style={styles.contentCenter}>
+              <ThemedText type="title" style={{ fontSize: 20 }}>{item.name}</ThemedText>
+              <ThemedText>₹{item.price}</ThemedText>
+
+              {/* Size Picker */}
+              <Picker
+                selectedValue={selectedSizes[item._id] || "M"}
+                onValueChange={(value) =>
+                  setSelectedSizes((prev) => ({ ...prev, [item._id]: value }))
+                }
+                style={styles.picker}
+              >
+                <Picker.Item label="S" value="S" />
+                <Picker.Item label="M" value="M" />
+                <Picker.Item label="L" value="L" />
+                <Picker.Item label="XL" value="XL" />
+              </Picker>
+
+              <ThemedText numberOfLines={2} style={styles.description}>
+                {item.description}
+              </ThemedText>
+
+              {/* Add to Cart button */}
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => handleAddToCart(item)}
+              >
+                <ThemedText style={styles.buttonText}>Add to Cart</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      />
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    fontFamily: "monospace",
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    backgroundColor: "#f9f9f9",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  heading: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+    fontFamily: "monospace"
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  row: {
+    justifyContent: "space-between",
+  },
+  card: {
+    backgroundColor: "#eac7b9ff",
+    padding: 10,
+    borderRadius: 10,
+    marginVertical: 8,
+    flex: 1,
+    margin: 5,
+    elevation: 3,
+  },
+  image: {
+    width: "100%",
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  title: {
+    fontSize: 10,
+  },
+  contentCenter: {
+    alignItems: "center", 
+  },
+  picker: {
+    height: 40,
+    borderRadius: 15,
+    borderColor: "#ccc",
+    marginVertical: 5,
+    width: 120, 
+    textAlign: "center",
+  },
+  description: {
+    textAlign: "center",
+    marginVertical: 5,
+  },
+  button: {
+    backgroundColor: "#e3b19eff",
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: "center",
+    width: "80%",
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });
